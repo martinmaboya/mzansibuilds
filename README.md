@@ -53,3 +53,8 @@ mvn spring-boot:run
 - UML class diagram: [docs/uml-class-diagram.md](docs/uml-class-diagram.md)
 - Backend planning notes: [docs/backend-plan.md](docs/backend-plan.md)
 - AI usage disclosure: [AI_USAGE.md](AI_USAGE.md)
+
+## Code Version Control Evidence
+
+- Competence write-up: [docs/code-version-control.md](docs/code-version-control.md)
+- CI workflow: [.github/workflows/ci.yml](.github/workflows/ci.yml)
