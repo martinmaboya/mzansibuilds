@@ -1,62 +1,65 @@
-# UML - Class Diagram
+# MzansiBuilds UML Diagrams
+
+Prepared for Derivco Code Skills Quest - Project Profiling
+
+## Class Diagram - main domain model for the MVP
+
+Class Diagram - entities, key attributes, and relationships used by the backend
 
 ```mermaid
 classDiagram
     class User {
-        +String id
+        +Long id
         +String fullName
         +String email
-        +String passwordHash
+        +String password
         +String bio
         +String githubLink
         +String linkedinLink
+        +LocalDateTime createdAt
     }
 
     class Project {
-        +String id
-        +String ownerId
-        +String ownerName
+        +Long id
         +String title
         +String description
         +ProjectStage stage
-        +SupportType supportRequired
+        +String supportRequired
+        +ProjectStatus status
         +boolean completed
         +LocalDateTime createdAt
         +LocalDateTime updatedAt
     }
 
     class ProgressUpdate {
-        +String id
-        +String projectId
-        +String authorId
-        +String milestone
-        +String note
+        +Long id
+        +String milestoneTitle
+        +String content
         +LocalDateTime createdAt
     }
 
     class Comment {
-        +String id
-        +String projectId
-        +String authorId
-        +String message
+        +Long id
+        +String content
         +LocalDateTime createdAt
     }
 
     class CollaborationRequest {
-        +String id
-        +String projectId
-        +String requesterId
+        +Long id
         +String message
-        +Status status
+        +RequestStatus status
         +LocalDateTime createdAt
     }
 
     User "1" --> "0..*" Project : owns
+    User "1" --> "0..*" Comment : author
+    User "1" --> "0..*" ProgressUpdate : author
+    User "1" --> "0..*" CollaborationRequest : creates
     Project "1" --> "0..*" ProgressUpdate : has
     Project "1" --> "0..*" Comment : has
-    Project "1" --> "0..*" CollaborationRequest : has
-    User "1" --> "0..*" Comment : writes
-    User "1" --> "0..*" CollaborationRequest : submits
+    Project "1" --> "0..*" CollaborationRequest : targets
 ```
 
-This model matches the current backend entities and the expected challenge relationships.
+## Backend architecture intent
+
+Layered Spring Boot design with Controller -> Service -> Repository. JWT secures private actions, DTOs handle input/output, and ownership checks ensure only project owners can edit, update, or complete their own projects.
