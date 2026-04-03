@@ -7,6 +7,7 @@ import com.mzansibuilds.backend.dto.CollaborationRequestDto;
 import com.mzansibuilds.backend.entity.Project;
 import com.mzansibuilds.backend.entity.ProjectStage;
 import com.mzansibuilds.backend.entity.SupportType;
+import com.mzansibuilds.backend.exception.UnauthorizedActionException;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,7 +27,7 @@ class InMemoryProjectServiceTest {
                 SupportType.FEEDBACK
         );
 
-        Project project = service.createProject(request);
+        Project project = service.createProject("developer@example.com", request);
 
         assertEquals("Open Ledger", project.getTitle());
         assertEquals(ProjectStage.PLANNING, project.getStage());
@@ -35,7 +36,7 @@ class InMemoryProjectServiceTest {
 
     @Test
     void completeProjectMovesProjectToCelebrationWall() {
-        Project completedProject = service.completeProject("project_1");
+        Project completedProject = service.completeProject("developer@example.com", "project_1");
 
         assertTrue(completedProject.isCompleted());
         assertEquals(ProjectStage.COMPLETED, completedProject.getStage());
@@ -45,6 +46,7 @@ class InMemoryProjectServiceTest {
     @Test
     void addProgressUpdateCapturesMilestoneForProject() {
         var update = service.addProgressUpdate(
+                "developer@example.com",
                 "project_1",
                 new ProgressUpdateRequest("Auth flow", "Added registration and login endpoints")
         );
@@ -57,6 +59,7 @@ class InMemoryProjectServiceTest {
     @Test
     void addCommentCapturesCommentForProject() {
         var comment = service.addComment(
+                "developer@example.com",
                 "project_1",
                 new CommentRequest("This looks clean and ready for review")
         );
@@ -68,6 +71,7 @@ class InMemoryProjectServiceTest {
     @Test
     void raiseHandCreatesOpenCollaborationRequest() {
         var request = service.raiseHand(
+                "developer@example.com",
                 "project_1",
                 new CollaborationRequestDto("Happy to help with the backend validation")
         );
@@ -79,6 +83,20 @@ class InMemoryProjectServiceTest {
 
     @Test
     void completeUnknownProjectThrowsHelpfulError() {
-        assertThrows(IllegalArgumentException.class, () -> service.completeProject("missing-project"));
+        assertThrows(IllegalArgumentException.class, () -> service.completeProject("developer@example.com", "missing-project"));
+    }
+
+    @Test
+    void updateByNonOwnerIsRejected() {
+        ProjectRequest request = new ProjectRequest(
+                "Updated title",
+                "Updated description",
+                ProjectStage.TESTING,
+                SupportType.BACKEND_HELP
+        );
+
+        assertThrows(UnauthorizedActionException.class, () ->
+                service.updateProject("someone-else", "project_1", request)
+        );
     }
 }

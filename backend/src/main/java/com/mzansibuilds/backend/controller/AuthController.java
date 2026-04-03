@@ -3,6 +3,7 @@ package com.mzansibuilds.backend.controller;
 import com.mzansibuilds.backend.dto.LoginRequest;
 import com.mzansibuilds.backend.dto.RegisterRequest;
 import com.mzansibuilds.backend.entity.DeveloperUser;
+import com.mzansibuilds.backend.security.JwtService;
 import com.mzansibuilds.backend.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -18,9 +19,11 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final JwtService jwtService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, JwtService jwtService) {
         this.authService = authService;
+        this.jwtService = jwtService;
     }
 
     @PostMapping("/register")
@@ -32,6 +35,7 @@ public class AuthController {
     @PostMapping("/login")
     public Map<String, Object> login(@Valid @RequestBody LoginRequest request) {
         DeveloperUser user = authService.login(request);
-        return Map.of("token", "dev-token-placeholder", "user", user);
+        String token = jwtService.generateToken(user.getEmail());
+        return Map.of("token", token, "tokenType", "Bearer", "user", user);
     }
 }

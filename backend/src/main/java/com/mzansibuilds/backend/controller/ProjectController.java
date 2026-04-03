@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -38,8 +39,8 @@ public class ProjectController {
     }
 
     @PostMapping
-    public Project createProject(@Valid @RequestBody ProjectRequest request) {
-        return projectService.createProject(request);
+    public Project createProject(Principal principal, @Valid @RequestBody ProjectRequest request) {
+        return projectService.createProject(principal.getName(), request);
     }
 
     @GetMapping("/{id}")
@@ -51,8 +52,8 @@ public class ProjectController {
     }
 
     @PutMapping("/{id}")
-    public Project updateProject(@PathVariable String id, @Valid @RequestBody ProjectRequest request) {
-        return projectService.updateProject(id, request);
+    public Project updateProject(Principal principal, @PathVariable String id, @Valid @RequestBody ProjectRequest request) {
+        return projectService.updateProject(principal.getName(), id, request);
     }
 
     @DeleteMapping("/{id}")
@@ -64,22 +65,22 @@ public class ProjectController {
     }
 
     @PatchMapping("/{id}/complete")
-    public Project completeProject(@PathVariable String id) {
-        return projectService.completeProject(id);
+    public Project completeProject(Principal principal, @PathVariable String id) {
+        return projectService.completeProject(principal.getName(), id);
     }
 
     @PostMapping("/{id}/updates")
-    public ProgressUpdate addUpdate(@PathVariable String id, @Valid @RequestBody ProgressUpdateRequest request) {
-        return projectService.addProgressUpdate(id, request);
+    public ProgressUpdate addUpdate(Principal principal, @PathVariable String id, @Valid @RequestBody ProgressUpdateRequest request) {
+        return projectService.addProgressUpdate(principal.getName(), id, request);
     }
 
     @PostMapping("/{id}/comments")
-    public ProjectComment addComment(@PathVariable String id, @Valid @RequestBody CommentRequest request) {
-        return projectService.addComment(id, request);
+    public ProjectComment addComment(Principal principal, @PathVariable String id, @Valid @RequestBody CommentRequest request) {
+        return projectService.addComment(principal.getName(), id, request);
     }
 
     @PostMapping("/{id}/raise-hand")
-    public CollaborationRequest raiseHand(@PathVariable String id, @Valid @RequestBody CollaborationRequestDto request) {
-        return projectService.raiseHand(id, request);
+    public CollaborationRequest raiseHand(Principal principal, @PathVariable String id, @Valid @RequestBody CollaborationRequestDto request) {
+        return projectService.raiseHand(principal.getName(), id, request);
     }
 }

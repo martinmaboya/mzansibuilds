@@ -10,6 +10,7 @@ import com.mzansibuilds.backend.entity.ProjectComment;
 import com.mzansibuilds.backend.entity.ProjectStage;
 import com.mzansibuilds.backend.entity.ProgressUpdate;
 import com.mzansibuilds.backend.entity.SupportType;
+import com.mzansibuilds.backend.exception.UnauthorizedActionException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -29,8 +30,8 @@ public class InMemoryProjectService implements ProjectService {
     public InMemoryProjectService() {
         Project project = new Project();
         project.setId("project_1");
-        project.setOwnerId("user_1");
-        project.setOwnerName("Martin Maboya");
+        project.setOwnerId("developer@example.com");
+        project.setOwnerName("developer@example.com");
         project.setTitle("MzansiBuilds");
         project.setDescription("Public build tracker for the Derivco Code Skills Quest.");
         project.setStage(ProjectStage.IN_PROGRESS);
@@ -57,11 +58,11 @@ public class InMemoryProjectService implements ProjectService {
     }
 
     @Override
-    public Project createProject(ProjectRequest request) {
+    public Project createProject(String requesterId, ProjectRequest request) {
         Project project = new Project();
         project.setId("project_" + (projects.size() + 1));
-        project.setOwnerId("user_1");
-        project.setOwnerName("Martin Maboya");
+        project.setOwnerId(requesterId);
+        project.setOwnerName(requesterId);
         project.setTitle(request.title());
         project.setDescription(request.description());
         project.setStage(request.stage());
@@ -74,8 +75,9 @@ public class InMemoryProjectService implements ProjectService {
     }
 
     @Override
-    public Project updateProject(String id, ProjectRequest request) {
+    public Project updateProject(String requesterId, String id, ProjectRequest request) {
         Project project = findProject(id);
+        ensureOwner(requesterId, project);
         project.setTitle(request.title());
         project.setDescription(request.description());
         project.setStage(request.stage());
@@ -85,8 +87,9 @@ public class InMemoryProjectService implements ProjectService {
     }
 
     @Override
-    public Project completeProject(String id) {
+    public Project completeProject(String requesterId, String id) {
         Project project = findProject(id);
+        ensureOwner(requesterId, project);
         project.setCompleted(true);
         project.setStage(ProjectStage.COMPLETED);
         project.setUpdatedAt(LocalDateTime.now());
@@ -94,12 +97,13 @@ public class InMemoryProjectService implements ProjectService {
     }
 
     @Override
-    public ProgressUpdate addProgressUpdate(String projectId, ProgressUpdateRequest request) {
-        findProject(projectId);
+    public ProgressUpdate addProgressUpdate(String requesterId, String projectId, ProgressUpdateRequest request) {
+        Project project = findProject(projectId);
+        ensureOwner(requesterId, project);
         ProgressUpdate update = new ProgressUpdate();
         update.setId("update_" + (updates.size() + 1));
         update.setProjectId(projectId);
-        update.setAuthorId("user_1");
+        update.setAuthorId(requesterId);
         update.setMilestone(request.milestone());
         update.setNote(request.note());
         update.setCreatedAt(LocalDateTime.now());
@@ -108,12 +112,12 @@ public class InMemoryProjectService implements ProjectService {
     }
 
     @Override
-    public ProjectComment addComment(String projectId, CommentRequest request) {
+    public ProjectComment addComment(String requesterId, String projectId, CommentRequest request) {
         findProject(projectId);
         ProjectComment comment = new ProjectComment();
         comment.setId("comment_" + (comments.size() + 1));
         comment.setProjectId(projectId);
-        comment.setAuthorId("user_1");
+        comment.setAuthorId(requesterId);
         comment.setMessage(request.message());
         comment.setCreatedAt(LocalDateTime.now());
         comments.add(comment);
@@ -121,17 +125,23 @@ public class InMemoryProjectService implements ProjectService {
     }
 
     @Override
-    public CollaborationRequest raiseHand(String projectId, CollaborationRequestDto request) {
+    public CollaborationRequest raiseHand(String requesterId, String projectId, CollaborationRequestDto request) {
         findProject(projectId);
         CollaborationRequest collaborationRequest = new CollaborationRequest();
         collaborationRequest.setId("request_" + (collaborationRequests.size() + 1));
         collaborationRequest.setProjectId(projectId);
-        collaborationRequest.setRequesterId("user_1");
+        collaborationRequest.setRequesterId(requesterId);
         collaborationRequest.setMessage(request.message());
         collaborationRequest.setStatus(CollaborationRequest.Status.OPEN);
         collaborationRequest.setCreatedAt(LocalDateTime.now());
         collaborationRequests.add(collaborationRequest);
         return collaborationRequest;
+    }
+
+    private void ensureOwner(String requesterId, Project project) {
+        if (!project.getOwnerId().equals(requesterId)) {
+            throw new UnauthorizedActionException("Only the project owner can perform this action");
+        }
     }
 
     private Project findProject(String id) {

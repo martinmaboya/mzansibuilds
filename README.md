@@ -65,3 +65,9 @@ mvn spring-boot:run
 - Competence write-up: [docs/test-driven-development.md](docs/test-driven-development.md)
 - Backend service tests: [backend/src/test/java/com/mzansibuilds/backend/service](backend/src/test/java/com/mzansibuilds/backend/service)
 - Controller test: [backend/src/test/java/com/mzansibuilds/backend/controller/HealthControllerTest.java](backend/src/test/java/com/mzansibuilds/backend/controller/HealthControllerTest.java)
+
+## Secure By Design Evidence
+
+- Competence write-up: [docs/secure-by-design.md](docs/secure-by-design.md)
+- Security config: [backend/src/main/java/com/mzansibuilds/backend/security/SecurityConfig.java](backend/src/main/java/com/mzansibuilds/backend/security/SecurityConfig.java)
+- Ownership checks: [backend/src/main/java/com/mzansibuilds/backend/service/InMemoryProjectService.java](backend/src/main/java/com/mzansibuilds/backend/service/InMemoryProjectService.java)
