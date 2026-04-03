@@ -45,10 +45,7 @@ public class ProjectController {
 
     @GetMapping("/{id}")
     public Project getProject(@PathVariable String id) {
-        return projectService.listProjects().stream()
-                .filter(project -> project.getId().equals(id))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Project not found"));
+        return projectService.getProjectById(id);
     }
 
     @PutMapping("/{id}")
@@ -57,11 +54,8 @@ public class ProjectController {
     }
 
     @DeleteMapping("/{id}")
-    public void deleteProject(@PathVariable String id) {
-        projectService.listProjects().stream()
-                .filter(project -> project.getId().equals(id))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Project not found"));
+    public void deleteProject(Principal principal, @PathVariable String id) {
+        projectService.deleteProject(principal.getName(), id);
     }
 
     @PatchMapping("/{id}/complete")

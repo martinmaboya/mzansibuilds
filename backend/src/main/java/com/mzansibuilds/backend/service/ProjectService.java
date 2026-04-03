@@ -14,8 +14,10 @@ import java.util.List;
 public interface ProjectService {
     List<Project> listProjects();
     List<Project> listCelebrationWall();
+    Project getProjectById(String id);
     Project createProject(String requesterId, ProjectRequest request);
     Project updateProject(String requesterId, String id, ProjectRequest request);
+    void deleteProject(String requesterId, String id);
     Project completeProject(String requesterId, String id);
     ProgressUpdate addProgressUpdate(String requesterId, String projectId, ProgressUpdateRequest request);
     ProjectComment addComment(String requesterId, String projectId, CommentRequest request);
