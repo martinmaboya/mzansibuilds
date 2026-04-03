@@ -28,7 +28,8 @@ The current focus is the API and domain structure for:
 - Spring Boot backend in `backend/`
 - Next.js frontend shell in `frontend/` for later expansion
 - TypeScript and Tailwind CSS for the UI layer when needed
-- In-memory backend service layer first, with JPA repositories already scaffolded for later persistence
+- MySQL runtime database with automatic creation enabled from the JDBC URL
+- H2 test profile for isolated backend test runs
 
 ## Run locally
 
@@ -58,3 +59,9 @@ mvn spring-boot:run
 
 - Competence write-up: [docs/code-version-control.md](docs/code-version-control.md)
 - CI workflow: [.github/workflows/ci.yml](.github/workflows/ci.yml)
+
+## Test-Driven Development Evidence
+
+- Competence write-up: [docs/test-driven-development.md](docs/test-driven-development.md)
+- Backend service tests: [backend/src/test/java/com/mzansibuilds/backend/service](backend/src/test/java/com/mzansibuilds/backend/service)
+- Controller test: [backend/src/test/java/com/mzansibuilds/backend/controller/HealthControllerTest.java](backend/src/test/java/com/mzansibuilds/backend/controller/HealthControllerTest.java)
