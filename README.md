@@ -71,3 +71,9 @@ mvn spring-boot:run
 - Competence write-up: [docs/secure-by-design.md](docs/secure-by-design.md)
 - Security config: [backend/src/main/java/com/mzansibuilds/backend/security/SecurityConfig.java](backend/src/main/java/com/mzansibuilds/backend/security/SecurityConfig.java)
 - Ownership checks: [backend/src/main/java/com/mzansibuilds/backend/service/InMemoryProjectService.java](backend/src/main/java/com/mzansibuilds/backend/service/InMemoryProjectService.java)
+
+## Documentation Evidence
+
+- Competence write-up: [docs/documentation-practices.md](docs/documentation-practices.md)
+- Backend README: [backend/README.md](backend/README.md)
+- Root docs overview: [docs/](docs)
