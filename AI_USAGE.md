@@ -1,7 +1,9 @@
 # AI Usage Disclosure
 
-AI was used as a development companion for brainstorming, scaffolding ideas, and reviewing code structure.
+AI was used as a development companion for brainstorming, refining ideas, reviewing code structure, and improving documentation.
 
-Final implementation choices, debugging, testing, and submission decisions are my own.
+All final implementation decisions, code integration, debugging, testing, and submission choices were completed by me.
 
-AI was not used to bypass assessment requirements, misrepresent authorship, or hide any part of the development process.
+I reviewed and validated all AI-assisted suggestions before applying them to the project.
+
+AI was not used to bypass assessment requirements, misrepresent authorship, or replace my own understanding of the solution.
