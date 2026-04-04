@@ -30,7 +30,7 @@ Developers often build in isolation, which reduces visibility, accountability, a
 
 ## Chosen Stack
 - Backend: Spring Boot (Java 17, Web, Validation, Security)
-- Data layer: JPA + H2 (development), designed for migration to PostgreSQL/MySQL
+- Data layer: JPA + MySQL (development/runtime), with H2 used only for isolated tests
 - Frontend shell: Next.js (to be integrated after backend stabilization)
 
 ## Why This Stack
