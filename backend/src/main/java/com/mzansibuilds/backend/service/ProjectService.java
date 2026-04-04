@@ -14,12 +14,12 @@ import java.util.List;
 public interface ProjectService {
     List<Project> listProjects();
     List<Project> listCelebrationWall();
-    Project getProjectById(String id);
+    Project getProjectById(Long id);
     Project createProject(String requesterId, ProjectRequest request);
-    Project updateProject(String requesterId, String id, ProjectRequest request);
-    void deleteProject(String requesterId, String id);
-    Project completeProject(String requesterId, String id);
-    ProgressUpdate addProgressUpdate(String requesterId, String projectId, ProgressUpdateRequest request);
-    ProjectComment addComment(String requesterId, String projectId, CommentRequest request);
-    CollaborationRequest raiseHand(String requesterId, String projectId, CollaborationRequestDto request);
+    Project updateProject(String requesterId, Long id, ProjectRequest request);
+    void deleteProject(String requesterId, Long id);
+    Project completeProject(String requesterId, Long id);
+    ProgressUpdate addProgressUpdate(String requesterId, Long projectId, ProgressUpdateRequest request);
+    ProjectComment addComment(String requesterId, Long projectId, CommentRequest request);
+    CollaborationRequest raiseHand(String requesterId, Long projectId, CollaborationRequestDto request);
 }

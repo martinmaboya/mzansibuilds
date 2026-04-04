@@ -157,7 +157,7 @@ class InMemoryProjectServiceTest {
 
     @Test
     void completeUnknownProjectThrowsHelpfulError() {
-        assertThrows(IllegalArgumentException.class, () -> service.completeProject("developer@example.com", "missing-project"));
+        assertThrows(IllegalArgumentException.class, () -> service.completeProject("developer@example.com", -1L));
     }
 
     @Test

@@ -44,37 +44,37 @@ public class ProjectController {
     }
 
     @GetMapping("/{id}")
-    public Project getProject(@PathVariable String id) {
+    public Project getProject(@PathVariable Long id) {
         return projectService.getProjectById(id);
     }
 
     @PutMapping("/{id}")
-    public Project updateProject(Principal principal, @PathVariable String id, @Valid @RequestBody ProjectRequest request) {
+    public Project updateProject(Principal principal, @PathVariable Long id, @Valid @RequestBody ProjectRequest request) {
         return projectService.updateProject(principal.getName(), id, request);
     }
 
     @DeleteMapping("/{id}")
-    public void deleteProject(Principal principal, @PathVariable String id) {
+    public void deleteProject(Principal principal, @PathVariable Long id) {
         projectService.deleteProject(principal.getName(), id);
     }
 
     @PatchMapping("/{id}/complete")
-    public Project completeProject(Principal principal, @PathVariable String id) {
+    public Project completeProject(Principal principal, @PathVariable Long id) {
         return projectService.completeProject(principal.getName(), id);
     }
 
     @PostMapping("/{id}/updates")
-    public ProgressUpdate addUpdate(Principal principal, @PathVariable String id, @Valid @RequestBody ProgressUpdateRequest request) {
+    public ProgressUpdate addUpdate(Principal principal, @PathVariable Long id, @Valid @RequestBody ProgressUpdateRequest request) {
         return projectService.addProgressUpdate(principal.getName(), id, request);
     }
 
     @PostMapping("/{id}/comments")
-    public ProjectComment addComment(Principal principal, @PathVariable String id, @Valid @RequestBody CommentRequest request) {
+    public ProjectComment addComment(Principal principal, @PathVariable Long id, @Valid @RequestBody CommentRequest request) {
         return projectService.addComment(principal.getName(), id, request);
     }
 
     @PostMapping("/{id}/raise-hand")
-    public CollaborationRequest raiseHand(Principal principal, @PathVariable String id, @Valid @RequestBody CollaborationRequestDto request) {
+    public CollaborationRequest raiseHand(Principal principal, @PathVariable Long id, @Valid @RequestBody CollaborationRequestDto request) {
         return projectService.raiseHand(principal.getName(), id, request);
     }
 }

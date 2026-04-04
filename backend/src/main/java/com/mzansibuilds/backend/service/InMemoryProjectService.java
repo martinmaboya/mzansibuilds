@@ -56,7 +56,7 @@ public class InMemoryProjectService implements ProjectService {
     }
 
     @Override
-    public Project getProjectById(String id) {
+    public Project getProjectById(Long id) {
         return findProject(id);
     }
 
@@ -77,7 +77,7 @@ public class InMemoryProjectService implements ProjectService {
     }
 
     @Override
-    public Project updateProject(String requesterId, String id, ProjectRequest request) {
+    public Project updateProject(String requesterId, Long id, ProjectRequest request) {
         Project project = findProject(id);
         ensureOwner(requesterId, project);
         project.setTitle(request.title());
@@ -89,14 +89,14 @@ public class InMemoryProjectService implements ProjectService {
     }
 
     @Override
-    public void deleteProject(String requesterId, String id) {
+    public void deleteProject(String requesterId, Long id) {
         Project project = findProject(id);
         ensureOwner(requesterId, project);
         projectRepository.deleteById(id);
     }
 
     @Override
-    public Project completeProject(String requesterId, String id) {
+    public Project completeProject(String requesterId, Long id) {
         Project project = findProject(id);
         ensureOwner(requesterId, project);
         project.setCompleted(true);
@@ -106,7 +106,7 @@ public class InMemoryProjectService implements ProjectService {
     }
 
     @Override
-    public ProgressUpdate addProgressUpdate(String requesterId, String projectId, ProgressUpdateRequest request) {
+    public ProgressUpdate addProgressUpdate(String requesterId, Long projectId, ProgressUpdateRequest request) {
         Project project = findProject(projectId);
         ensureOwner(requesterId, project);
         ProgressUpdate update = new ProgressUpdate();
@@ -119,7 +119,7 @@ public class InMemoryProjectService implements ProjectService {
     }
 
     @Override
-    public ProjectComment addComment(String requesterId, String projectId, CommentRequest request) {
+    public ProjectComment addComment(String requesterId, Long projectId, CommentRequest request) {
         findProject(projectId);
         ProjectComment comment = new ProjectComment();
         comment.setProjectId(projectId);
@@ -130,7 +130,7 @@ public class InMemoryProjectService implements ProjectService {
     }
 
     @Override
-    public CollaborationRequest raiseHand(String requesterId, String projectId, CollaborationRequestDto request) {
+    public CollaborationRequest raiseHand(String requesterId, Long projectId, CollaborationRequestDto request) {
         findProject(projectId);
         CollaborationRequest collaborationRequest = new CollaborationRequest();
         collaborationRequest.setProjectId(projectId);
@@ -147,7 +147,7 @@ public class InMemoryProjectService implements ProjectService {
         }
     }
 
-    private Project findProject(String id) {
+    private Project findProject(Long id) {
         return projectRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Project not found"));
     }
 }

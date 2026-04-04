@@ -141,18 +141,18 @@ export async function createProject(
   })
 }
 
-export async function getProject(token: string, projectId: string) {
+export async function getProject(token: string, projectId: number) {
   return request<Project>(`/api/projects/${projectId}`, { token })
 }
 
-export async function completeProject(token: string, projectId: string) {
+export async function completeProject(token: string, projectId: number) {
   return request<Project>(`/api/projects/${projectId}/complete`, {
     method: 'PATCH',
     token,
   })
 }
 
-export async function deleteProject(token: string, projectId: string) {
+export async function deleteProject(token: string, projectId: number) {
   return request<void>(`/api/projects/${projectId}`, {
     method: 'DELETE',
     token,
@@ -161,7 +161,7 @@ export async function deleteProject(token: string, projectId: string) {
 
 export async function addMilestone(
   token: string,
-  projectId: string,
+  projectId: number,
   body: { milestone: string; note: string }
 ) {
   return request<ProgressUpdate>(`/api/projects/${projectId}/updates`, {
@@ -171,7 +171,7 @@ export async function addMilestone(
   })
 }
 
-export async function addComment(token: string, projectId: string, body: { message: string }) {
+export async function addComment(token: string, projectId: number, body: { message: string }) {
   return request<ProjectComment>(`/api/projects/${projectId}/comments`, {
     method: 'POST',
     token,
@@ -179,7 +179,7 @@ export async function addComment(token: string, projectId: string, body: { messa
   })
 }
 
-export async function raiseHand(token: string, projectId: string, body: { message: string }) {
+export async function raiseHand(token: string, projectId: number, body: { message: string }) {
   return request<CollaborationRequest>(`/api/projects/${projectId}/raise-hand`, {
     method: 'POST',
     token,

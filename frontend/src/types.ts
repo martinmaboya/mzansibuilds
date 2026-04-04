@@ -9,7 +9,7 @@ export type SupportType =
   | 'TESTING_HELP'
 
 export type DeveloperUser = {
-  id: string
+  id: number
   fullName: string
   email: string
   bio?: string
@@ -18,7 +18,7 @@ export type DeveloperUser = {
 }
 
 export type Project = {
-  id: string
+  id: number
   ownerId: string
   ownerName: string
   title: string
@@ -31,8 +31,8 @@ export type Project = {
 }
 
 export type ProgressUpdate = {
-  id: string
-  projectId: string
+  id: number
+  projectId: number
   authorId: string
   milestone: string
   note: string
@@ -40,16 +40,16 @@ export type ProgressUpdate = {
 }
 
 export type ProjectComment = {
-  id: string
-  projectId: string
+  id: number
+  projectId: number
   authorId: string
   message: string
   createdAt: string
 }
 
 export type CollaborationRequest = {
-  id: string
-  projectId: string
+  id: number
+  projectId: number
   requesterId: string
   message: string
   status: 'OPEN' | 'ACCEPTED' | 'DECLINED' | string

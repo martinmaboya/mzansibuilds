@@ -111,7 +111,7 @@ class ApiFlowIntegrationTest {
                 .andExpect(jsonPath("$.title").value("MzansiBuilds"))
                 .andReturn();
 
-        String projectId = objectMapper.readTree(createProjectResult.getResponse().getContentAsString()).get("id").asText();
+        long projectId = objectMapper.readTree(createProjectResult.getResponse().getContentAsString()).get("id").asLong();
 
         mockMvc.perform(get("/api/projects/{id}", projectId)
                         .header("Authorization", "Bearer " + token))

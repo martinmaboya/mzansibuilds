@@ -85,7 +85,7 @@ function App() {
 
   const [projects, setProjects] = useState<Project[]>([])
   const [celebrations, setCelebrations] = useState<Project[]>([])
-  const [activeProjectId, setActiveProjectId] = useState('')
+  const [activeProjectId, setActiveProjectId] = useState<number | null>(null)
   const [projectSnapshot, setProjectSnapshot] = useState<Project | null>(null)
 
   const [milestone, setMilestone] = useState('')
@@ -127,13 +127,13 @@ function App() {
 
   useEffect(() => {
     if (!projects.length) {
-      if (activeProjectId) {
-        setActiveProjectId('')
+      if (activeProjectId !== null) {
+        setActiveProjectId(null)
       }
       return
     }
 
-    if (!activeProjectId || !projects.some((project) => project.id === activeProjectId)) {
+    if (activeProjectId === null || !projects.some((project) => project.id === activeProjectId)) {
       setActiveProjectId(projects[0].id)
     }
   }, [projects, activeProjectId])
@@ -248,7 +248,7 @@ function App() {
     }
   }
 
-  const onCompleteProject = async (projectId: string) => {
+  const onCompleteProject = async (projectId: number) => {
     if (!authReady) {
       setStatus('')
       setError('You must login before completing projects.')
@@ -271,7 +271,7 @@ function App() {
   }
 
   const onReloadProject = async () => {
-    if (!authReady || !activeProjectId) {
+    if (!authReady || activeProjectId === null) {
       setStatus('')
       setError('Select a project and login first.')
       return
@@ -292,7 +292,7 @@ function App() {
     }
   }
 
-  const onDeleteProject = async (projectId: string) => {
+  const onDeleteProject = async (projectId: number) => {
     if (!authReady) {
       setStatus('')
       setError('You must login before deleting projects.')
@@ -306,7 +306,7 @@ function App() {
       const project = projects.find((item) => item.id === projectId)
       await deleteProject(token, projectId)
       if (activeProjectId === projectId) {
-        setActiveProjectId('')
+        setActiveProjectId(null)
         setProjectSnapshot(null)
       }
       await refresh()
@@ -323,7 +323,7 @@ function App() {
     setAuthEmail('')
     setProjects([])
     setCelebrations([])
-    setActiveProjectId('')
+    setActiveProjectId(null)
     setProjectSnapshot(null)
     setStatus('Logged out. Register or login again to continue.')
     setError('')
@@ -332,7 +332,7 @@ function App() {
   const onMilestone = async (event: FormEvent) => {
     event.preventDefault()
 
-    if (!authReady || !activeProjectId) {
+    if (!authReady || activeProjectId === null) {
       setStatus('')
       setError('Select a project and login first.')
       return
@@ -356,7 +356,7 @@ function App() {
   const onComment = async (event: FormEvent) => {
     event.preventDefault()
 
-    if (!authReady || !activeProjectId) {
+    if (!authReady || activeProjectId === null) {
       setStatus('')
       setError('Select a project and login first.')
       return
@@ -379,7 +379,7 @@ function App() {
   const onRaiseHand = async (event: FormEvent) => {
     event.preventDefault()
 
-    if (!authReady || !activeProjectId) {
+    if (!authReady || activeProjectId === null) {
       setStatus('')
       setError('Select a project and login first.')
       return

@@ -5,6 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
-public interface CollaborationRequestRepository extends JpaRepository<CollaborationRequest, String> {
-    List<CollaborationRequest> findByProjectIdOrderByCreatedAtDesc(String projectId);
+public interface CollaborationRequestRepository extends JpaRepository<CollaborationRequest, Long> {
+    List<CollaborationRequest> findByProjectIdOrderByCreatedAtDesc(Long projectId);
 }
