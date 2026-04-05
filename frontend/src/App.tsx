@@ -1,6 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import {
-  API_BASE,
   addComment,
   addMilestone,
   completeProject,
@@ -48,7 +47,6 @@ const supportOptions: { label: string; value: SupportType }[] = [
 
 const AUTH_TOKEN_KEY = 'mzansibuilds.auth.token'
 const AUTH_EMAIL_KEY = 'mzansibuilds.auth.email'
-const showApiDebugLabels = import.meta.env.DEV || import.meta.env.VITE_SHOW_API_LABELS === 'true'
 
 function readStoredValue(key: string) {
   if (typeof window === 'undefined') {
@@ -538,7 +536,6 @@ function App() {
             <span className={`pill ${authReady ? 'pill-success' : 'pill-warn'}`}>
               {authReady ? 'Authenticated' : 'Guest mode'}
             </span>
-            {showApiDebugLabels ? <span className="pill">API: {API_BASE}</span> : null}
           </div>
 
           <div className="session-card">
@@ -672,7 +669,6 @@ function App() {
             <span className="eyebrow">03 · Account</span>
             <h3>Manage your profile</h3>
           </div>
-          <span className="tiny-chip alt">PATCH /api/me/profile</span>
         </div>
 
         {currentUser ? (
@@ -933,7 +929,6 @@ function App() {
             <span className="eyebrow">06 · Create</span>
               <h3>Publish a new project</h3>
           </div>
-          {showApiDebugLabels ? <span className="tiny-chip alt">POST /api/projects</span> : null}
         </div>
 
         <form onSubmit={onCreateProject} className="create-grid">
@@ -987,7 +982,6 @@ function App() {
             <span className="eyebrow">07 · Celebration</span>
             <h3>Celebration wall</h3>
           </div>
-          {showApiDebugLabels ? <span className="tiny-chip">GET /api/celebration</span> : null}
         </div>
 
         <div className="celebration-grid">
