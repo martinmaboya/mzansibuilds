@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface CollaborationRequestRepository extends JpaRepository<CollaborationRequest, Long> {
     List<CollaborationRequest> findByProjectIdOrderByCreatedAtDesc(Long projectId);
+    boolean existsByProjectIdAndRequesterIdAndStatus(Long projectId, String requesterId, CollaborationRequest.Status status);
 }

@@ -15,6 +15,9 @@ public interface ProjectService {
     List<Project> listProjects();
     List<Project> listCelebrationWall();
     Project getProjectById(Long id);
+    List<ProgressUpdate> listProgressUpdates(Long projectId);
+    List<ProjectComment> listComments(Long projectId);
+    List<CollaborationRequest> listCollaborationRequests(Long projectId);
     Project createProject(String requesterId, ProjectRequest request);
     Project updateProject(String requesterId, Long id, ProjectRequest request);
     void deleteProject(String requesterId, Long id);

@@ -48,6 +48,21 @@ public class ProjectController {
         return projectService.getProjectById(id);
     }
 
+    @GetMapping("/{id}/updates")
+    public List<ProgressUpdate> listUpdates(@PathVariable Long id) {
+        return projectService.listProgressUpdates(id);
+    }
+
+    @GetMapping("/{id}/comments")
+    public List<ProjectComment> listComments(@PathVariable Long id) {
+        return projectService.listComments(id);
+    }
+
+    @GetMapping("/{id}/collaboration-requests")
+    public List<CollaborationRequest> listCollaborationRequests(@PathVariable Long id) {
+        return projectService.listCollaborationRequests(id);
+    }
+
     @PutMapping("/{id}")
     public Project updateProject(Principal principal, @PathVariable Long id, @Valid @RequestBody ProjectRequest request) {
         return projectService.updateProject(principal.getName(), id, request);

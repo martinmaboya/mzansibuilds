@@ -47,6 +47,7 @@ class InMemoryProjectServiceTest {
     private InMemoryAuthService authService;
 
     private static final String OWNER_EMAIL = "developer@example.com";
+    private static final String COLLABORATOR_EMAIL = "collab@example.com";
 
     @BeforeEach
     void setUp() {
@@ -60,6 +61,14 @@ class InMemoryProjectServiceTest {
                 OWNER_EMAIL,
                 "devpass123!",
                 "Owner account",
+                null,
+                null
+        ));
+        authService.register(new com.mzansibuilds.backend.dto.RegisterRequest(
+                "Collaborator User",
+                COLLABORATOR_EMAIL,
+                "devpass123!",
+                "Collaborator account",
                 null,
                 null
         ));
@@ -145,7 +154,7 @@ class InMemoryProjectServiceTest {
         ));
 
         var request = service.raiseHand(
-                OWNER_EMAIL,
+                COLLABORATOR_EMAIL,
                 project.getId(),
                 new CollaborationRequestDto("Happy to help with the backend validation")
         );
@@ -153,6 +162,40 @@ class InMemoryProjectServiceTest {
         assertEquals(project.getId(), request.getProjectId());
         assertEquals("Happy to help with the backend validation", request.getMessage());
         assertEquals("OPEN", request.getStatus().name());
+    }
+
+    @Test
+    void raiseHandByOwnerIsRejected() {
+        Project project = service.createProject(OWNER_EMAIL, new ProjectRequest(
+                "MzansiBuilds",
+                "Public build tracker",
+                ProjectStage.IN_PROGRESS,
+                SupportType.BACKEND_HELP
+        ));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+                service.raiseHand(OWNER_EMAIL, project.getId(), new CollaborationRequestDto("I can help myself"))
+        );
+
+        assertEquals("Project owners cannot raise a hand on their own projects", exception.getMessage());
+    }
+
+    @Test
+    void duplicateOpenRaiseHandIsRejected() {
+        Project project = service.createProject(OWNER_EMAIL, new ProjectRequest(
+                "MzansiBuilds",
+                "Public build tracker",
+                ProjectStage.IN_PROGRESS,
+                SupportType.BACKEND_HELP
+        ));
+
+        service.raiseHand(COLLABORATOR_EMAIL, project.getId(), new CollaborationRequestDto("First request"));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+                service.raiseHand(COLLABORATOR_EMAIL, project.getId(), new CollaborationRequestDto("Second request"))
+        );
+
+        assertEquals("You already have an open collaboration request for this project", exception.getMessage());
     }
 
     @Test

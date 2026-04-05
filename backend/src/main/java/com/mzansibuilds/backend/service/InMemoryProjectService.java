@@ -61,6 +61,24 @@ public class InMemoryProjectService implements ProjectService {
     }
 
     @Override
+    public List<ProgressUpdate> listProgressUpdates(Long projectId) {
+        findProject(projectId);
+        return progressUpdateRepository.findByProjectIdOrderByCreatedAtDesc(projectId);
+    }
+
+    @Override
+    public List<ProjectComment> listComments(Long projectId) {
+        findProject(projectId);
+        return projectCommentRepository.findByProjectIdOrderByCreatedAtDesc(projectId);
+    }
+
+    @Override
+    public List<CollaborationRequest> listCollaborationRequests(Long projectId) {
+        findProject(projectId);
+        return collaborationRequestRepository.findByProjectIdOrderByCreatedAtDesc(projectId);
+    }
+
+    @Override
     public Project createProject(String requesterId, ProjectRequest request) {
         Project project = new Project();
         project.setOwnerId(requesterId);
@@ -131,7 +149,20 @@ public class InMemoryProjectService implements ProjectService {
 
     @Override
     public CollaborationRequest raiseHand(String requesterId, Long projectId, CollaborationRequestDto request) {
-        findProject(projectId);
+        Project project = findProject(projectId);
+
+        if (project.getOwnerId().equals(requesterId)) {
+            throw new IllegalArgumentException("Project owners cannot raise a hand on their own projects");
+        }
+
+        if (collaborationRequestRepository.existsByProjectIdAndRequesterIdAndStatus(
+                projectId,
+                requesterId,
+                CollaborationRequest.Status.OPEN
+        )) {
+            throw new IllegalArgumentException("You already have an open collaboration request for this project");
+        }
+
         CollaborationRequest collaborationRequest = new CollaborationRequest();
         collaborationRequest.setProjectId(projectId);
         collaborationRequest.setRequesterId(requesterId);
