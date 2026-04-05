@@ -2,6 +2,7 @@ package com.mzansibuilds.backend.controller;
 
 import com.mzansibuilds.backend.dto.UpdateProfileRequest;
 import com.mzansibuilds.backend.entity.DeveloperUser;
+import com.mzansibuilds.backend.exception.UserNotFoundException;
 import com.mzansibuilds.backend.repository.DeveloperUserRepository;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,7 +40,7 @@ public class MeController {
 
     private DeveloperUser findUser(String email) {
         return developerUserRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
     }
 }
 
