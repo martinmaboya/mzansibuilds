@@ -22,3 +22,20 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# IDE settings
+.idea/
+.vscode/
+
+# Frontend generated and dependency artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/legacy-next/node_modules/
+frontend/legacy-next/.next/
+frontend/legacy-next/.eslintrc.json
+
+# TypeScript/Vite generated outputs
+frontend/*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+
