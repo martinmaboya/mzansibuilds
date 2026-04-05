@@ -75,5 +75,6 @@ mvn spring-boot:run
 ## Documentation Evidence
 
 - Competence write-up: [docs/documentation-practices.md](docs/documentation-practices.md)
+- Submission screenshot checklist: [docs/assessment-screenshots-checklist.md](docs/assessment-screenshots-checklist.md)
 - Backend README: [backend/README.md](backend/README.md)
 - Root docs overview: [docs/](docs)

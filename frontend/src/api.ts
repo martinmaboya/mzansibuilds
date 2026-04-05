@@ -145,6 +145,33 @@ export async function getProject(token: string, projectId: number) {
   return request<Project>(`/api/projects/${projectId}`, { token })
 }
 
+export async function getProjectUpdates(token: string, projectId: number) {
+  return request<ProgressUpdate[]>(`/api/projects/${projectId}/updates`, { token })
+}
+
+export async function getProjectComments(token: string, projectId: number) {
+  return request<ProjectComment[]>(`/api/projects/${projectId}/comments`, { token })
+}
+
+export async function getProjectCollaborationRequests(token: string, projectId: number) {
+  return request<CollaborationRequest[]>(`/api/projects/${projectId}/collaboration-requests`, { token })
+}
+
+export async function getCurrentUser(token: string) {
+  return request<DeveloperUser>('/api/me', { token })
+}
+
+export async function updateMyProfile(
+  token: string,
+  body: { fullName: string; bio?: string; githubLink?: string; linkedinLink?: string }
+) {
+  return request<DeveloperUser>('/api/me/profile', {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify(body),
+  })
+}
+
 export async function completeProject(token: string, projectId: number) {
   return request<Project>(`/api/projects/${projectId}/complete`, {
     method: 'PATCH',

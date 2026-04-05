@@ -36,9 +36,14 @@ The app also sends requests using an explicit backend base URL in code:
 
 - `POST /api/auth/register`
 - `POST /api/auth/login`
+- `GET /api/me`
+- `PATCH /api/me/profile`
 - `GET /api/feed`
 - `GET /api/celebration`
 - `POST /api/projects`
+- `GET /api/projects/{id}/updates`
+- `GET /api/projects/{id}/comments`
+- `GET /api/projects/{id}/collaboration-requests`
 - `PATCH /api/projects/{id}/complete`
 - `POST /api/projects/{id}/updates`
 - `POST /api/projects/{id}/comments`

@@ -6,15 +6,28 @@ import {
   completeProject,
   createProject,
   deleteProject,
+  getCurrentUser,
   getCelebrationWall,
   getFeed,
+  getProjectCollaborationRequests,
+  getProjectComments,
   getProject,
+  getProjectUpdates,
   loginUser,
   raiseHand,
   registerUser,
   toLabel,
+  updateMyProfile,
 } from './api'
-import { Project, ProjectStage, SupportType } from './types'
+import {
+  CollaborationRequest,
+  DeveloperUser,
+  Project,
+  ProjectComment,
+  ProgressUpdate,
+  ProjectStage,
+  SupportType,
+} from './types'
 
 const stageOptions: { label: string; value: ProjectStage }[] = [
   { label: 'Idea', value: 'IDEA' },
@@ -87,6 +100,15 @@ function App() {
   const [celebrations, setCelebrations] = useState<Project[]>([])
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null)
   const [projectSnapshot, setProjectSnapshot] = useState<Project | null>(null)
+  const [projectUpdates, setProjectUpdates] = useState<ProgressUpdate[]>([])
+  const [projectComments, setProjectComments] = useState<ProjectComment[]>([])
+  const [projectCollaborationRequests, setProjectCollaborationRequests] = useState<CollaborationRequest[]>([])
+
+  const [currentUser, setCurrentUser] = useState<DeveloperUser | null>(null)
+  const [profileName, setProfileName] = useState('')
+  const [profileBio, setProfileBio] = useState('')
+  const [profileGithub, setProfileGithub] = useState('')
+  const [profileLinkedin, setProfileLinkedin] = useState('')
 
   const [milestone, setMilestone] = useState('')
   const [milestoneNote, setMilestoneNote] = useState('')
@@ -139,14 +161,36 @@ function App() {
   }, [projects, activeProjectId])
 
   useEffect(() => {
+    if (!token || activeProjectId === null) {
+      setProjectUpdates([])
+      setProjectComments([])
+      setProjectCollaborationRequests([])
+      return
+    }
+
+    loadProjectActivity(activeProjectId, token).catch((requestError) => {
+      setError(resolveErrorMessage(requestError, 'Could not load project activity'))
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProjectId, token])
+
+  useEffect(() => {
     if (!token) {
       setProjects([])
       setCelebrations([])
       setProjectSnapshot(null)
+      setProjectUpdates([])
+      setProjectComments([])
+      setProjectCollaborationRequests([])
+      setCurrentUser(null)
+      setProfileName('')
+      setProfileBio('')
+      setProfileGithub('')
+      setProfileLinkedin('')
       return
     }
 
-    refresh(token).catch((requestError) => {
+    Promise.all([refresh(token), loadCurrentUser(token)]).catch((requestError) => {
       setError(requestError instanceof Error ? requestError.message : 'Could not load dashboard data')
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -160,6 +204,35 @@ function App() {
     const [feed, wall] = await Promise.all([getFeed(jwt), getCelebrationWall(jwt)])
     setProjects(feed)
     setCelebrations(wall)
+  }
+
+  const loadCurrentUser = async (jwt = token) => {
+    if (!jwt) {
+      return
+    }
+
+    const user = await getCurrentUser(jwt)
+    setCurrentUser(user)
+    setProfileName(user.fullName ?? '')
+    setProfileBio(user.bio ?? '')
+    setProfileGithub(user.githubLink ?? '')
+    setProfileLinkedin(user.linkedinLink ?? '')
+  }
+
+  const loadProjectActivity = async (projectId: number, jwt = token) => {
+    if (!jwt) {
+      return
+    }
+
+    const [updates, comments, requests] = await Promise.all([
+      getProjectUpdates(jwt, projectId),
+      getProjectComments(jwt, projectId),
+      getProjectCollaborationRequests(jwt, projectId),
+    ])
+
+    setProjectUpdates(updates)
+    setProjectComments(comments)
+    setProjectCollaborationRequests(requests)
   }
 
   const showActionError = (action: string, requestError: unknown, fallback: string) => {
@@ -283,6 +356,7 @@ function App() {
     try {
       const project = await getProject(token, activeProjectId)
       setProjectSnapshot(project)
+      await loadProjectActivity(project.id)
       await refresh()
       setStatus(`Project "${project.title}" reloaded from backend.`)
     } catch (requestError) {
@@ -325,6 +399,14 @@ function App() {
     setCelebrations([])
     setActiveProjectId(null)
     setProjectSnapshot(null)
+    setProjectUpdates([])
+    setProjectComments([])
+    setProjectCollaborationRequests([])
+    setCurrentUser(null)
+    setProfileName('')
+    setProfileBio('')
+    setProfileGithub('')
+    setProfileLinkedin('')
     setStatus('Logged out. Register or login again to continue.')
     setError('')
   }
@@ -343,6 +425,7 @@ function App() {
 
     try {
       await addMilestone(token, activeProjectId, { milestone, note: milestoneNote })
+      await loadProjectActivity(activeProjectId)
       setMilestone('')
       setMilestoneNote('')
       setStatus('Milestone submitted successfully.')
@@ -367,6 +450,7 @@ function App() {
 
     try {
       await addComment(token, activeProjectId, { message: comment })
+      await loadProjectActivity(activeProjectId)
       setComment('')
       setStatus('Comment posted successfully.')
     } catch (requestError) {
@@ -385,15 +469,50 @@ function App() {
       return
     }
 
+    if (selectedProject?.ownerId === authEmail) {
+      setStatus('')
+      setError('You cannot raise a collaboration request on your own project.')
+      return
+    }
+
     setLoading(true)
     setError('')
 
     try {
       await raiseHand(token, activeProjectId, { message: collaborationMessage })
+      await loadProjectActivity(activeProjectId)
       setCollaborationMessage('')
       setStatus('Collaboration request sent successfully.')
     } catch (requestError) {
       showActionError('Send collaboration request', requestError, 'Could not send collaboration request.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const onUpdateProfile = async (event: FormEvent) => {
+    event.preventDefault()
+
+    if (!authReady) {
+      setStatus('')
+      setError('You must login before updating your profile.')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const user = await updateMyProfile(token, {
+        fullName: profileName,
+        bio: profileBio,
+        githubLink: profileGithub,
+        linkedinLink: profileLinkedin,
+      })
+      setCurrentUser(user)
+      setStatus('Profile updated successfully.')
+    } catch (requestError) {
+      showActionError('Update profile', requestError, 'Could not update profile.')
     } finally {
       setLoading(false)
     }
@@ -407,7 +526,7 @@ function App() {
       <header className="topbar glass">
         <div>
           <span className="eyebrow">MzansiBuilds</span>
-          <h1>Modern build tracker for the backend-first challenge</h1>
+          <h1>Build in public with a clean green workspace</h1>
           <p>
             Register, login, create projects, post updates, comment, raise hands, and move completed work to the
             celebration wall.
@@ -440,10 +559,10 @@ function App() {
       <section className="hero glass">
         <div className="hero-copy">
           <span className="eyebrow">Full-stack workspace</span>
-          <h2>Fast, polished, and tied exactly to the Spring Boot API.</h2>
+          <h2>Green, white, and black UI connected to the live Spring Boot API.</h2>
           <p>
-            The UI now uses the live backend contract for auth, project feed, celebration wall, progress updates,
-            comments, collaboration requests, reload, and delete.
+            Use one flow from start to finish: register, login, publish projects, post progress, collaborate, and
+            celebrate completions.
           </p>
         </div>
 
@@ -457,89 +576,142 @@ function App() {
         </div>
       </section>
 
-      <section className="split-grid">
-        <form onSubmit={onLogin} className="glass panel">
+      {!authReady ? (
+        <section className="split-grid">
+          <form onSubmit={onLogin} className="glass panel">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">01 · Login</span>
+                <h3>Sign in to continue building</h3>
+              </div>
+              <span className="tiny-chip">JWT</span>
+            </div>
+
+            <div className="form-grid">
+              <label>
+                <span>Email</span>
+                <input
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  type="email"
+                  placeholder="you@example.com"
+                  required
+                />
+              </label>
+              <label>
+                <span>Password</span>
+                <input
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  type="password"
+                  placeholder="••••••••"
+                  required
+                />
+              </label>
+            </div>
+
+            <button disabled={loading}>Sign in</button>
+            <p className="hint">Register first if the account does not exist yet.</p>
+          </form>
+
+          <form onSubmit={onRegister} className="glass panel">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">02 · Register</span>
+                <h3>Create your developer account</h3>
+              </div>
+              <span className="tiny-chip alt">DB</span>
+            </div>
+
+            <div className="form-grid">
+              <label>
+                <span>Full name</span>
+                <input value={registerName} onChange={(e) => setRegisterName(e.target.value)} required />
+              </label>
+              <label>
+                <span>Email</span>
+                <input value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)} type="email" required />
+              </label>
+              <label>
+                <span>Password</span>
+                <input value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} type="password" required />
+              </label>
+              <label>
+                <span>Bio</span>
+                <input value={registerBio} onChange={(e) => setRegisterBio(e.target.value)} placeholder="Short intro" />
+              </label>
+              <label>
+                <span>GitHub</span>
+                <input value={registerGithub} onChange={(e) => setRegisterGithub(e.target.value)} placeholder="https://github.com/..." />
+              </label>
+              <label>
+                <span>LinkedIn</span>
+                <input value={registerLinkedin} onChange={(e) => setRegisterLinkedin(e.target.value)} placeholder="https://linkedin.com/in/..." />
+              </label>
+            </div>
+
+            <button disabled={loading}>Create account</button>
+          </form>
+        </section>
+      ) : (
+        <section className="glass panel">
           <div className="panel-header">
             <div>
-              <span className="eyebrow">01 · Login</span>
-              <h3>Return to your workspace</h3>
+              <span className="eyebrow">01 · Auth</span>
+              <h3>You are signed in</h3>
             </div>
-            <span className="tiny-chip">JWT</span>
+            <span className="tiny-chip success">Session active</span>
           </div>
+          <p className="hint">Login and registration forms are hidden while your session is active.</p>
+        </section>
+      )}
 
-          <div className="form-grid">
-            <label>
-              <span>Email</span>
-              <input
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-                type="email"
-                placeholder="you@example.com"
-                required
-              />
-            </label>
-            <label>
-              <span>Password</span>
-              <input
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                type="password"
-                placeholder="••••••••"
-                required
-              />
-            </label>
+      <section className="glass panel">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">03 · Account</span>
+            <h3>Manage your profile</h3>
           </div>
+          <span className="tiny-chip alt">PATCH /api/me/profile</span>
+        </div>
 
-          <button disabled={loading}>Sign in</button>
-          <p className="hint">Register first if the account does not exist yet.</p>
-        </form>
-
-        <form onSubmit={onRegister} className="glass panel">
-          <div className="panel-header">
-            <div>
-              <span className="eyebrow">02 · Register</span>
-              <h3>Create a developer profile</h3>
-            </div>
-            <span className="tiny-chip alt">DB</span>
-          </div>
-
-          <div className="form-grid">
+        {currentUser ? (
+          <form onSubmit={onUpdateProfile} className="form-grid">
             <label>
               <span>Full name</span>
-              <input value={registerName} onChange={(e) => setRegisterName(e.target.value)} required />
+              <input value={profileName} onChange={(e) => setProfileName(e.target.value)} required />
             </label>
             <label>
-              <span>Email</span>
-              <input value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)} type="email" required />
-            </label>
-            <label>
-              <span>Password</span>
-              <input value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} type="password" required />
+              <span>Email (from session)</span>
+              <input value={currentUser.email} readOnly disabled />
             </label>
             <label>
               <span>Bio</span>
-              <input value={registerBio} onChange={(e) => setRegisterBio(e.target.value)} placeholder="Short intro" />
+              <input value={profileBio} onChange={(e) => setProfileBio(e.target.value)} placeholder="Tell other devs what you build" />
             </label>
             <label>
               <span>GitHub</span>
-              <input value={registerGithub} onChange={(e) => setRegisterGithub(e.target.value)} placeholder="https://github.com/..." />
+              <input value={profileGithub} onChange={(e) => setProfileGithub(e.target.value)} placeholder="https://github.com/..." />
             </label>
             <label>
               <span>LinkedIn</span>
-              <input value={registerLinkedin} onChange={(e) => setRegisterLinkedin(e.target.value)} placeholder="https://linkedin.com/in/..." />
+              <input value={profileLinkedin} onChange={(e) => setProfileLinkedin(e.target.value)} placeholder="https://linkedin.com/in/..." />
             </label>
-          </div>
-
-          <button disabled={loading}>Create account</button>
-        </form>
+            <div>
+              <button disabled={!authReady || loading}>Save profile</button>
+            </div>
+          </form>
+        ) : (
+          <p className="empty-state">Login to load and manage your profile information.</p>
+        )}
       </section>
 
       <section className="workspace-grid">
         <div className="glass panel feed-panel">
           <div className="panel-header">
             <div>
-              <span className="eyebrow">03 · Projects</span>
-              <h3>Live feed</h3>
+              <span className="eyebrow">04 · Projects</span>
+              <h3>Developer feed</h3>
             </div>
             <div className="row-gap">
               <button type="button" className="secondary-btn" onClick={() => refresh()} disabled={!authReady || loading}>
@@ -614,7 +786,7 @@ function App() {
         <div className="glass panel side-panel">
           <div className="panel-header">
             <div>
-              <span className="eyebrow">04 · Inspector</span>
+              <span className="eyebrow">05 · Inspector</span>
               <h3>Selected project</h3>
             </div>
             <span className="tiny-chip">{selectedProject ? 'Live' : 'Empty'}</span>
@@ -709,6 +881,45 @@ function App() {
                 />
                 <button disabled={loading}>Send collaboration request</button>
               </form>
+
+              <div className="subpanel">
+                <h4>Milestone history</h4>
+                {projectUpdates.length === 0 ? (
+                  <p className="empty-state">No milestones yet.</p>
+                ) : (
+                  projectUpdates.map((update) => (
+                    <p key={update.id} className="mini-note">
+                      <strong>{update.milestone}</strong> - {update.note}
+                    </p>
+                  ))
+                )}
+              </div>
+
+              <div className="subpanel">
+                <h4>Comment history</h4>
+                {projectComments.length === 0 ? (
+                  <p className="empty-state">No comments yet.</p>
+                ) : (
+                  projectComments.map((entry) => (
+                    <p key={entry.id} className="mini-note">
+                      <strong>{entry.authorId}</strong>: {entry.message}
+                    </p>
+                  ))
+                )}
+              </div>
+
+              <div className="subpanel">
+                <h4>Collaboration requests</h4>
+                {projectCollaborationRequests.length === 0 ? (
+                  <p className="empty-state">No collaboration requests yet.</p>
+                ) : (
+                  projectCollaborationRequests.map((entry) => (
+                    <p key={entry.id} className="mini-note">
+                      <strong>{entry.requesterId}</strong>: {entry.message} ({entry.status})
+                    </p>
+                  ))
+                )}
+              </div>
             </div>
           ) : (
             <p className="empty-state">Select a project from the feed to inspect details and run actions.</p>
@@ -719,8 +930,8 @@ function App() {
       <section className="glass panel">
         <div className="panel-header">
           <div>
-            <span className="eyebrow">05 · Create</span>
-            <h3>New project</h3>
+            <span className="eyebrow">06 · Create</span>
+              <h3>Publish a new project</h3>
           </div>
           {showApiDebugLabels ? <span className="tiny-chip alt">POST /api/projects</span> : null}
         </div>
@@ -773,8 +984,8 @@ function App() {
       <section className="glass panel">
         <div className="panel-header">
           <div>
-            <span className="eyebrow">06 · Celebration</span>
-            <h3>Wall of wins</h3>
+            <span className="eyebrow">07 · Celebration</span>
+            <h3>Celebration wall</h3>
           </div>
           {showApiDebugLabels ? <span className="tiny-chip">GET /api/celebration</span> : null}
         </div>
@@ -795,7 +1006,7 @@ function App() {
 
       <section className="glass status-panel">
         <div>
-          <span className="eyebrow">System status</span>
+          <span className="eyebrow">Action status</span>
           {status ? <p className="success">{status}</p> : <p className="hint">No recent actions.</p>}
           {error && <p className="error">{error}</p>}
         </div>
