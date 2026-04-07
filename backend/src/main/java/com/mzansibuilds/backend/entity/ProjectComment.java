@@ -18,6 +18,7 @@ public class ProjectComment {
 
     private Long projectId;
     private String authorId;
+    private Long parentCommentId;
     private String message;
     private LocalDateTime createdAt;
 
@@ -46,6 +47,14 @@ public class ProjectComment {
 
     public void setAuthorId(String authorId) {
         this.authorId = authorId;
+    }
+
+    public Long getParentCommentId() {
+        return parentCommentId;
+    }
+
+    public void setParentCommentId(Long parentCommentId) {
+        this.parentCommentId = parentCommentId;
     }
 
     public String getMessage() {

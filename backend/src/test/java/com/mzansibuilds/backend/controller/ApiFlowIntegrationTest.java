@@ -164,24 +164,70 @@ class ApiFlowIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.projectId").value(projectId));
 
-        mockMvc.perform(post("/api/projects/{id}/comments", projectId)
+        MvcResult commentResult = mockMvc.perform(post("/api/projects/{id}/comments", projectId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"message\":\"Looks good\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.projectId").value(projectId));
+                .andExpect(jsonPath("$.projectId").value(projectId))
+                .andReturn();
+
+        long commentId = objectMapper.readTree(commentResult.getResponse().getContentAsString()).get("id").asLong();
+
+        mockMvc.perform(post("/api/projects/{id}/comments/{commentId}/replies", projectId, commentId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Thanks, please add a testing note too\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.parentCommentId").value(commentId));
+
+        mockMvc.perform(post("/api/projects/{id}/comments/{commentId}/replies", projectId, commentId)
+                        .header("Authorization", "Bearer " + collaboratorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Will do, adding it now\"}"))
+                .andExpect(status().isForbidden());
+
+        MvcResult raiseHandResult = mockMvc.perform(post("/api/projects/{id}/raise-hand", projectId)
+                        .header("Authorization", "Bearer " + collaboratorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Can help\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("OPEN"))
+                .andReturn();
+
+        long collaborationRequestId = objectMapper.readTree(raiseHandResult.getResponse().getContentAsString()).get("id").asLong();
+
+        mockMvc.perform(patch("/api/projects/{id}/collaboration-requests/{requestId}/accept", projectId, collaborationRequestId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"));
+
+        MvcResult secondRaiseHandResult = mockMvc.perform(post("/api/projects/{id}/raise-hand", projectId)
+                        .header("Authorization", "Bearer " + collaboratorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Can help again\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("OPEN"))
+                .andReturn();
+
+        long secondCollaborationRequestId = objectMapper.readTree(secondRaiseHandResult.getResponse().getContentAsString()).get("id").asLong();
+
+        mockMvc.perform(patch("/api/projects/{id}/collaboration-requests/{requestId}/decline", projectId, secondCollaborationRequestId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DECLINED"));
 
         mockMvc.perform(post("/api/projects/{id}/raise-hand", projectId)
                         .header("Authorization", "Bearer " + collaboratorToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"message\":\"Can help\"}"))
+                        .content("{\"message\":\"Can help again\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("OPEN"));
 
         mockMvc.perform(post("/api/projects/{id}/raise-hand", projectId)
                         .header("Authorization", "Bearer " + collaboratorToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"message\":\"Can help again\"}"))
+                        .content("{\"message\":\"Duplicate open request\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("You already have an open collaboration request for this project"));
 
@@ -198,7 +244,9 @@ class ApiFlowIntegrationTest {
         mockMvc.perform(get("/api/projects/{id}/collaboration-requests", projectId)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].message").value("Can help"));
+                .andExpect(jsonPath("$[0].status").value("OPEN"))
+                .andExpect(jsonPath("$[1].status").value("DECLINED"))
+                .andExpect(jsonPath("$[2].status").value("ACCEPTED"));
 
         mockMvc.perform(get("/api/me")
                         .header("Authorization", "Bearer " + token))

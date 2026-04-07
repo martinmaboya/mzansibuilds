@@ -88,8 +88,28 @@ public class ProjectController {
         return projectService.addComment(principal.getName(), id, request);
     }
 
+    @PostMapping("/{id}/comments/{commentId}/replies")
+    public ProjectComment addReply(
+            Principal principal,
+            @PathVariable Long id,
+            @PathVariable Long commentId,
+            @Valid @RequestBody CommentRequest request
+    ) {
+        return projectService.addReply(principal.getName(), id, commentId, request);
+    }
+
     @PostMapping("/{id}/raise-hand")
     public CollaborationRequest raiseHand(Principal principal, @PathVariable Long id, @Valid @RequestBody CollaborationRequestDto request) {
         return projectService.raiseHand(principal.getName(), id, request);
+    }
+
+    @PatchMapping("/{id}/collaboration-requests/{requestId}/accept")
+    public CollaborationRequest acceptCollaborationRequest(Principal principal, @PathVariable Long id, @PathVariable Long requestId) {
+        return projectService.acceptCollaborationRequest(principal.getName(), id, requestId);
+    }
+
+    @PatchMapping("/{id}/collaboration-requests/{requestId}/decline")
+    public CollaborationRequest declineCollaborationRequest(Principal principal, @PathVariable Long id, @PathVariable Long requestId) {
+        return projectService.declineCollaborationRequest(principal.getName(), id, requestId);
     }
 }

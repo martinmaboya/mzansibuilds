@@ -69,7 +69,7 @@ public class InMemoryProjectService implements ProjectService {
     @Override
     public List<ProjectComment> listComments(Long projectId) {
         findProject(projectId);
-        return projectCommentRepository.findByProjectIdOrderByCreatedAtDesc(projectId);
+        return projectCommentRepository.findByProjectIdOrderByCreatedAtAsc(projectId);
     }
 
     @Override
@@ -142,9 +142,31 @@ public class InMemoryProjectService implements ProjectService {
         ProjectComment comment = new ProjectComment();
         comment.setProjectId(projectId);
         comment.setAuthorId(requesterId);
+        comment.setParentCommentId(null);
         comment.setMessage(request.message());
         comment.setCreatedAt(LocalDateTime.now());
         return projectCommentRepository.save(comment);
+    }
+
+    @Override
+    public ProjectComment addReply(String requesterId, Long projectId, Long commentId, CommentRequest request) {
+        Project project = findProject(projectId);
+        ProjectComment parentComment = projectCommentRepository.findByIdAndProjectId(commentId, projectId)
+                .orElseThrow(() -> new IllegalArgumentException("Comment not found"));
+
+        ProjectComment rootComment = resolveThreadRoot(projectId, parentComment);
+        boolean canReply = requesterId.equals(project.getOwnerId()) || requesterId.equals(rootComment.getAuthorId());
+        if (!canReply) {
+            throw new UnauthorizedActionException("Only the project owner or original commenter can reply in this thread");
+        }
+
+        ProjectComment reply = new ProjectComment();
+        reply.setProjectId(projectId);
+        reply.setAuthorId(requesterId);
+        reply.setParentCommentId(rootComment.getId());
+        reply.setMessage(request.message());
+        reply.setCreatedAt(LocalDateTime.now());
+        return projectCommentRepository.save(reply);
     }
 
     @Override
@@ -170,6 +192,45 @@ public class InMemoryProjectService implements ProjectService {
         collaborationRequest.setStatus(CollaborationRequest.Status.OPEN);
         collaborationRequest.setCreatedAt(LocalDateTime.now());
         return collaborationRequestRepository.save(collaborationRequest);
+    }
+
+    @Override
+    public CollaborationRequest acceptCollaborationRequest(String requesterId, Long projectId, Long requestId) {
+        return decideCollaborationRequest(requesterId, projectId, requestId, CollaborationRequest.Status.ACCEPTED);
+    }
+
+    @Override
+    public CollaborationRequest declineCollaborationRequest(String requesterId, Long projectId, Long requestId) {
+        return decideCollaborationRequest(requesterId, projectId, requestId, CollaborationRequest.Status.DECLINED);
+    }
+
+    private CollaborationRequest decideCollaborationRequest(
+            String requesterId,
+            Long projectId,
+            Long requestId,
+            CollaborationRequest.Status nextStatus
+    ) {
+        Project project = findProject(projectId);
+        ensureOwner(requesterId, project);
+
+        CollaborationRequest request = collaborationRequestRepository.findByIdAndProjectId(requestId, projectId)
+                .orElseThrow(() -> new IllegalArgumentException("Collaboration request not found"));
+
+        if (request.getStatus() != CollaborationRequest.Status.OPEN) {
+            throw new IllegalArgumentException("Only open collaboration requests can be updated");
+        }
+
+        request.setStatus(nextStatus);
+        return collaborationRequestRepository.save(request);
+    }
+
+    private ProjectComment resolveThreadRoot(Long projectId, ProjectComment comment) {
+        ProjectComment current = comment;
+        while (current.getParentCommentId() != null) {
+            current = projectCommentRepository.findByIdAndProjectId(current.getParentCommentId(), projectId)
+                    .orElseThrow(() -> new IllegalArgumentException("Comment thread is invalid"));
+        }
+        return current;
     }
 
     private void ensureOwner(String requesterId, Project project) {

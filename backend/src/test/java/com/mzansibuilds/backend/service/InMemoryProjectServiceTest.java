@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -48,6 +49,7 @@ class InMemoryProjectServiceTest {
 
     private static final String OWNER_EMAIL = "developer@example.com";
     private static final String COLLABORATOR_EMAIL = "collab@example.com";
+    private static final String OTHER_EMAIL = "viewer@example.com";
 
     @BeforeEach
     void setUp() {
@@ -69,6 +71,14 @@ class InMemoryProjectServiceTest {
                 COLLABORATOR_EMAIL,
                 "devpass123!",
                 "Collaborator account",
+                null,
+                null
+        ));
+        authService.register(new com.mzansibuilds.backend.dto.RegisterRequest(
+                "Viewer User",
+                OTHER_EMAIL,
+                "devpass123!",
+                "Viewer account",
                 null,
                 null
         ));
@@ -196,6 +206,104 @@ class InMemoryProjectServiceTest {
         );
 
         assertEquals("You already have an open collaboration request for this project", exception.getMessage());
+    }
+
+    @Test
+    void ownerCanAcceptAndDeclineCollaborationRequests() {
+        Project project = service.createProject(OWNER_EMAIL, new ProjectRequest(
+                "MzansiBuilds",
+                "Public build tracker",
+                ProjectStage.IN_PROGRESS,
+                SupportType.BACKEND_HELP
+        ));
+
+        var firstRequest = service.raiseHand(
+                COLLABORATOR_EMAIL,
+                project.getId(),
+                new CollaborationRequestDto("Ready to help")
+        );
+        var accepted = service.acceptCollaborationRequest(OWNER_EMAIL, project.getId(), firstRequest.getId());
+        assertEquals("ACCEPTED", accepted.getStatus().name());
+
+        var secondRequest = service.raiseHand(
+                COLLABORATOR_EMAIL,
+                project.getId(),
+                new CollaborationRequestDto("Available for testing")
+        );
+        var declined = service.declineCollaborationRequest(OWNER_EMAIL, project.getId(), secondRequest.getId());
+        assertEquals("DECLINED", declined.getStatus().name());
+    }
+
+    @Test
+    void nonOwnerCannotDecideCollaborationRequest() {
+        Project project = service.createProject(OWNER_EMAIL, new ProjectRequest(
+                "MzansiBuilds",
+                "Public build tracker",
+                ProjectStage.IN_PROGRESS,
+                SupportType.BACKEND_HELP
+        ));
+        var request = service.raiseHand(
+                COLLABORATOR_EMAIL,
+                project.getId(),
+                new CollaborationRequestDto("Ready to help")
+        );
+
+        assertThrows(UnauthorizedActionException.class, () ->
+                service.acceptCollaborationRequest(COLLABORATOR_EMAIL, project.getId(), request.getId())
+        );
+    }
+
+    @Test
+    void ownerAndOriginalCommenterCanReplyToCommentThread() {
+        Project project = service.createProject(OWNER_EMAIL, new ProjectRequest(
+                "MzansiBuilds",
+                "Public build tracker",
+                ProjectStage.IN_PROGRESS,
+                SupportType.BACKEND_HELP
+        ));
+
+        var rootComment = service.addComment(
+                COLLABORATOR_EMAIL,
+                project.getId(),
+                new CommentRequest("Can we split this into milestones?")
+        );
+
+        var ownerReply = service.addReply(
+                OWNER_EMAIL,
+                project.getId(),
+                rootComment.getId(),
+                new CommentRequest("Yes, let us track milestones weekly")
+        );
+
+        var senderReply = service.addReply(
+                COLLABORATOR_EMAIL,
+                project.getId(),
+                rootComment.getId(),
+                new CommentRequest("Great, I will post the first one today")
+        );
+
+        assertEquals(rootComment.getId(), ownerReply.getParentCommentId());
+        assertEquals(rootComment.getId(), senderReply.getParentCommentId());
+        assertNotNull(ownerReply.getCreatedAt());
+    }
+
+    @Test
+    void unrelatedUserCannotReplyToThread() {
+        Project project = service.createProject(OWNER_EMAIL, new ProjectRequest(
+                "MzansiBuilds",
+                "Public build tracker",
+                ProjectStage.IN_PROGRESS,
+                SupportType.BACKEND_HELP
+        ));
+        var rootComment = service.addComment(
+                COLLABORATOR_EMAIL,
+                project.getId(),
+                new CommentRequest("Any update?")
+        );
+
+        assertThrows(UnauthorizedActionException.class, () ->
+                service.addReply(OTHER_EMAIL, project.getId(), rootComment.getId(), new CommentRequest("I am not in this thread"))
+        );
     }
 
     @Test

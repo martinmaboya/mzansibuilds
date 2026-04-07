@@ -24,5 +24,8 @@ public interface ProjectService {
     Project completeProject(String requesterId, Long id);
     ProgressUpdate addProgressUpdate(String requesterId, Long projectId, ProgressUpdateRequest request);
     ProjectComment addComment(String requesterId, Long projectId, CommentRequest request);
+    ProjectComment addReply(String requesterId, Long projectId, Long commentId, CommentRequest request);
     CollaborationRequest raiseHand(String requesterId, Long projectId, CollaborationRequestDto request);
+    CollaborationRequest acceptCollaborationRequest(String requesterId, Long projectId, Long requestId);
+    CollaborationRequest declineCollaborationRequest(String requesterId, Long projectId, Long requestId);
 }
