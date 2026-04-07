@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import {
   addComment,
   addMilestone,
@@ -78,6 +78,7 @@ function resolveErrorMessage(requestError: unknown, fallback: string) {
 }
 
 function App() {
+  const inspectorPanelRef = useRef<HTMLDivElement | null>(null)
   const [token, setToken] = useState(() => readStoredValue(AUTH_TOKEN_KEY))
   const [authEmail, setAuthEmail] = useState(() => readStoredValue(AUTH_EMAIL_KEY))
   const [loading, setLoading] = useState(false)
@@ -640,6 +641,16 @@ function App() {
       setLoading(false)
     }
   }
+
+  const onInspectProject = (project: Project) => {
+    setActiveProjectId(project.id)
+    setProjectSnapshot(project)
+
+    // On smaller screens, inspector is below the feed; scroll there after selecting.
+    window.requestAnimationFrame(() => {
+      inspectorPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
   return (
     <div className="app-shell">
       <FeedbackModal
@@ -909,8 +920,7 @@ function App() {
                       className="ghost-btn"
                       onClick={(e) => {
                         e.stopPropagation()
-                        setActiveProjectId(project.id)
-                        setProjectSnapshot(project)
+                        onInspectProject(project)
                       }}
                     >
                       Inspect
@@ -922,7 +932,7 @@ function App() {
           </div>
         </div>
 
-        <div className="glass panel side-panel">
+        <div className="glass panel side-panel" ref={inspectorPanelRef}>
           <div className="panel-header">
             <div>
               <span className="eyebrow">05 · Inspector</span>
