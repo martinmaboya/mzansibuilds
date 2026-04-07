@@ -18,6 +18,8 @@ import {
   toLabel,
   updateMyProfile,
 } from './api'
+import ConfirmModal from './components/ConfirmModal'
+import FeedbackModal from './components/FeedbackModal'
 import {
   CollaborationRequest,
   DeveloperUser,
@@ -75,9 +77,13 @@ function resolveErrorMessage(requestError: unknown, fallback: string) {
 function App() {
   const [token, setToken] = useState(() => readStoredValue(AUTH_TOKEN_KEY))
   const [authEmail, setAuthEmail] = useState(() => readStoredValue(AUTH_EMAIL_KEY))
-  const [status, setStatus] = useState('Register or login to unlock the project workspace.')
-  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [feedbackModal, setFeedbackModal] = useState<{
+    kind: 'success' | 'error'
+    title: string
+    message: string
+  } | null>(null)
+  const [pendingDeleteProjectId, setPendingDeleteProjectId] = useState<number | null>(null)
 
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
@@ -145,6 +151,11 @@ function App() {
     [projects, activeProjectId, projectSnapshot]
   )
 
+  const pendingDeleteProject = useMemo(
+    () => projects.find((project) => project.id === pendingDeleteProjectId) ?? null,
+    [projects, pendingDeleteProjectId]
+  )
+
   useEffect(() => {
     if (!projects.length) {
       if (activeProjectId !== null) {
@@ -167,7 +178,11 @@ function App() {
     }
 
     loadProjectActivity(activeProjectId, token).catch((requestError) => {
-      setError(resolveErrorMessage(requestError, 'Could not load project activity'))
+      setFeedbackModal({
+        kind: 'error',
+        title: 'Project activity failed to load',
+        message: resolveErrorMessage(requestError, 'Could not load project activity'),
+      })
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProjectId, token])
@@ -189,7 +204,11 @@ function App() {
     }
 
     Promise.all([refresh(token), loadCurrentUser(token)]).catch((requestError) => {
-      setError(requestError instanceof Error ? requestError.message : 'Could not load dashboard data')
+      setFeedbackModal({
+        kind: 'error',
+        title: 'Dashboard failed to load',
+        message: requestError instanceof Error ? requestError.message : 'Could not load dashboard data',
+      })
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token])
@@ -233,24 +252,25 @@ function App() {
     setProjectCollaborationRequests(requests)
   }
 
+  const showFeedback = (kind: 'success' | 'error', title: string, message: string) => {
+    setFeedbackModal({ kind, title, message })
+  }
+
   const showActionError = (action: string, requestError: unknown, fallback: string) => {
     const details = resolveErrorMessage(requestError, fallback)
-    setStatus('')
-    setError(`${action} failed: ${details}`)
+    showFeedback('error', `${action} failed`, details)
   }
 
   const afterAuthSuccess = async (jwt: string, email: string, message: string) => {
     setToken(jwt)
     setAuthEmail(email)
-    setStatus(message)
-    setError('')
+    showFeedback('success', 'Authentication successful', message)
     await refresh(jwt)
   }
 
   const onLogin = async (event: FormEvent) => {
     event.preventDefault()
     setLoading(true)
-    setError('')
 
     try {
       const payload = await loginUser({ email: loginEmail, password: loginPassword })
@@ -266,7 +286,6 @@ function App() {
   const onRegister = async (event: FormEvent) => {
     event.preventDefault()
     setLoading(true)
-    setError('')
 
     try {
       const payload = await registerUser({
@@ -277,7 +296,7 @@ function App() {
         githubLink: registerGithub,
         linkedinLink: registerLinkedin,
       })
-      setStatus(`Registered ${payload.user.email}. You can login now.`)
+      showFeedback('success', 'Registration successful', `Registered ${payload.user.email}. You can login now.`)
       setLoginEmail(registerEmail)
       setLoginPassword(registerPassword)
       setRegisterName('')
@@ -297,13 +316,11 @@ function App() {
     event.preventDefault()
 
     if (!authReady) {
-      setStatus('')
-      setError('You must login before creating a project.')
+      showFeedback('error', 'Create project blocked', 'You must login before creating a project.')
       return
     }
 
     setLoading(true)
-    setError('')
 
     try {
       const project = await createProject(token, { title, description, stage, supportRequired })
@@ -311,7 +328,7 @@ function App() {
       setActiveProjectId(project.id)
       setTitle('')
       setDescription('')
-      setStatus(`Project "${project.title}" created successfully.`)
+      showFeedback('success', 'Project created', `Project "${project.title}" created successfully.`)
     } catch (requestError) {
       showActionError('Create project', requestError, 'Could not create project.')
     } finally {
@@ -321,19 +338,17 @@ function App() {
 
   const onCompleteProject = async (projectId: number) => {
     if (!authReady) {
-      setStatus('')
-      setError('You must login before completing projects.')
+      showFeedback('error', 'Complete project blocked', 'You must login before completing projects.')
       return
     }
 
     setLoading(true)
-    setError('')
 
     try {
       const project = projects.find((item) => item.id === projectId)
       await completeProject(token, projectId)
       await refresh()
-      setStatus(`Project "${project?.title ?? projectId}" moved to the celebration wall.`)
+      showFeedback('success', 'Project completed', `Project "${project?.title ?? projectId}" moved to the celebration wall.`)
     } catch (requestError) {
       showActionError('Complete project', requestError, 'Could not complete project.')
     } finally {
@@ -343,20 +358,18 @@ function App() {
 
   const onReloadProject = async () => {
     if (!authReady || activeProjectId === null) {
-      setStatus('')
-      setError('Select a project and login first.')
+      showFeedback('error', 'Reload blocked', 'Select a project and login first.')
       return
     }
 
     setLoading(true)
-    setError('')
 
     try {
       const project = await getProject(token, activeProjectId)
       setProjectSnapshot(project)
       await loadProjectActivity(project.id)
       await refresh()
-      setStatus(`Project "${project.title}" reloaded from backend.`)
+      showFeedback('success', 'Project reloaded', `Project "${project.title}" reloaded from backend.`)
     } catch (requestError) {
       showActionError('Reload project', requestError, 'Could not reload project.')
     } finally {
@@ -366,13 +379,11 @@ function App() {
 
   const onDeleteProject = async (projectId: number) => {
     if (!authReady) {
-      setStatus('')
-      setError('You must login before deleting projects.')
+      showFeedback('error', 'Delete project blocked', 'You must login before deleting projects.')
       return
     }
 
     setLoading(true)
-    setError('')
 
     try {
       const project = projects.find((item) => item.id === projectId)
@@ -382,12 +393,31 @@ function App() {
         setProjectSnapshot(null)
       }
       await refresh()
-      setStatus(`Project "${project?.title ?? projectId}" deleted successfully.`)
+      showFeedback('success', 'Project deleted', `Project "${project?.title ?? projectId}" deleted successfully.`)
     } catch (requestError) {
       showActionError('Delete project', requestError, 'Could not delete project.')
     } finally {
       setLoading(false)
     }
+  }
+
+  const openDeleteConfirmation = (projectId: number) => {
+    if (!authReady) {
+      showFeedback('error', 'Delete project blocked', 'You must login before deleting projects.')
+      return
+    }
+
+    setPendingDeleteProjectId(projectId)
+  }
+
+  const confirmDeleteProject = async () => {
+    if (pendingDeleteProjectId === null) {
+      return
+    }
+
+    const projectId = pendingDeleteProjectId
+    setPendingDeleteProjectId(null)
+    await onDeleteProject(projectId)
   }
 
   const onLogout = () => {
@@ -405,28 +435,25 @@ function App() {
     setProfileBio('')
     setProfileGithub('')
     setProfileLinkedin('')
-    setStatus('Logged out. Register or login again to continue.')
-    setError('')
+    showFeedback('success', 'Logged out', 'You have been logged out. Register or login again to continue.')
   }
 
   const onMilestone = async (event: FormEvent) => {
     event.preventDefault()
 
     if (!authReady || activeProjectId === null) {
-      setStatus('')
-      setError('Select a project and login first.')
+      showFeedback('error', 'Submit milestone blocked', 'Select a project and login first.')
       return
     }
 
     setLoading(true)
-    setError('')
 
     try {
       await addMilestone(token, activeProjectId, { milestone, note: milestoneNote })
       await loadProjectActivity(activeProjectId)
       setMilestone('')
       setMilestoneNote('')
-      setStatus('Milestone submitted successfully.')
+      showFeedback('success', 'Milestone submitted', 'Milestone submitted successfully.')
     } catch (requestError) {
       showActionError('Submit milestone', requestError, 'Could not submit milestone.')
     } finally {
@@ -438,19 +465,17 @@ function App() {
     event.preventDefault()
 
     if (!authReady || activeProjectId === null) {
-      setStatus('')
-      setError('Select a project and login first.')
+      showFeedback('error', 'Comment blocked', 'Select a project and login first.')
       return
     }
 
     setLoading(true)
-    setError('')
 
     try {
       await addComment(token, activeProjectId, { message: comment })
       await loadProjectActivity(activeProjectId)
       setComment('')
-      setStatus('Comment posted successfully.')
+      showFeedback('success', 'Comment posted', 'Comment posted successfully.')
     } catch (requestError) {
       showActionError('Post comment', requestError, 'Could not post comment.')
     } finally {
@@ -462,25 +487,22 @@ function App() {
     event.preventDefault()
 
     if (!authReady || activeProjectId === null) {
-      setStatus('')
-      setError('Select a project and login first.')
+      showFeedback('error', 'Raise hand blocked', 'Select a project and login first.')
       return
     }
 
     if (selectedProject?.ownerId === authEmail) {
-      setStatus('')
-      setError('You cannot raise a collaboration request on your own project.')
+      showFeedback('error', 'Raise hand blocked', 'You cannot raise a collaboration request on your own project.')
       return
     }
 
     setLoading(true)
-    setError('')
 
     try {
       await raiseHand(token, activeProjectId, { message: collaborationMessage })
       await loadProjectActivity(activeProjectId)
       setCollaborationMessage('')
-      setStatus('Collaboration request sent successfully.')
+      showFeedback('success', 'Collaboration request sent', 'Collaboration request sent successfully.')
     } catch (requestError) {
       showActionError('Send collaboration request', requestError, 'Could not send collaboration request.')
     } finally {
@@ -492,13 +514,11 @@ function App() {
     event.preventDefault()
 
     if (!authReady) {
-      setStatus('')
-      setError('You must login before updating your profile.')
+      showFeedback('error', 'Update profile blocked', 'You must login before updating your profile.')
       return
     }
 
     setLoading(true)
-    setError('')
 
     try {
       const user = await updateMyProfile(token, {
@@ -508,7 +528,7 @@ function App() {
         linkedinLink: profileLinkedin,
       })
       setCurrentUser(user)
-      setStatus('Profile updated successfully.')
+      showFeedback('success', 'Profile updated', 'Profile updated successfully.')
     } catch (requestError) {
       showActionError('Update profile', requestError, 'Could not update profile.')
     } finally {
@@ -516,8 +536,41 @@ function App() {
     }
   }
 
+  const onRefreshFeed = async () => {
+    if (!authReady) {
+      showFeedback('error', 'Refresh blocked', 'You must login first to refresh the feed.')
+      return
+    }
+    setLoading(true)
+    try {
+      await refresh()
+      showFeedback('success', 'Feed refreshed', 'Feed refreshed successfully.')
+    } catch (requestError) {
+      showActionError('Refresh feed', requestError, 'Could not refresh feed.')
+    } finally {
+      setLoading(false)
+    }
+  }
   return (
     <div className="app-shell">
+      <FeedbackModal
+        open={feedbackModal !== null}
+        kind={feedbackModal?.kind ?? 'success'}
+        title={feedbackModal?.title ?? ''}
+        message={feedbackModal?.message ?? ''}
+        onClose={() => setFeedbackModal(null)}
+      />
+      <ConfirmModal
+        open={pendingDeleteProjectId !== null}
+        title={`Delete project ${pendingDeleteProject?.title ? `“${pendingDeleteProject.title}”` : ''}?`}
+        message="This action cannot be undone. The project will be removed from the feed, activity lists, and the inspector."
+        confirmLabel="Delete project"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          void confirmDeleteProject()
+        }}
+        onCancel={() => setPendingDeleteProjectId(null)}
+      />
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
 
@@ -572,6 +625,7 @@ function App() {
           ))}
         </div>
       </section>
+
 
       {!authReady ? (
         <section className="split-grid">
@@ -710,7 +764,7 @@ function App() {
               <h3>Developer feed</h3>
             </div>
             <div className="row-gap">
-              <button type="button" className="secondary-btn" onClick={() => refresh()} disabled={!authReady || loading}>
+              <button type="button" className="secondary-btn" onClick={() => void onRefreshFeed()} disabled={!authReady || loading}>
                 Refresh feed
               </button>
             </div>
@@ -832,7 +886,7 @@ function App() {
                 <button
                   type="button"
                   className="danger-btn"
-                  onClick={() => void onDeleteProject(selectedProject.id)}
+                  onClick={() => openDeleteConfirmation(selectedProject.id)}
                   disabled={!authReady || loading}
                 >
                   Delete project
@@ -995,18 +1049,6 @@ function App() {
               <p>{project.ownerName}</p>
             </article>
           ))}
-        </div>
-      </section>
-
-      <section className="glass status-panel">
-        <div>
-          <span className="eyebrow">Action status</span>
-          {status ? <p className="success">{status}</p> : <p className="hint">No recent actions.</p>}
-          {error && <p className="error">{error}</p>}
-        </div>
-        <div className="row-gap wrap">
-          <span className="tiny-chip">{loading ? 'Working…' : 'Idle'}</span>
-          <span className={`tiny-chip ${authReady ? 'success' : 'warn'}`}>{authReady ? 'Session ready' : 'Login required'}</span>
         </div>
       </section>
     </div>
