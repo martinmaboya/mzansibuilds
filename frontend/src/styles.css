@@ -551,6 +551,24 @@ label span {
   margin-bottom: 0.2rem;
 }
 
+.comment-thread,
+.request-thread {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.reply-note {
+  margin-left: 0.9rem;
+  padding-left: 0.7rem;
+  border-left: 2px solid rgba(34, 197, 94, 0.28);
+}
+
+.inline-reply-form {
+  display: grid;
+  gap: 0.55rem;
+  margin-left: 0.9rem;
+}
+
 .feed-actions,
 .inspector-actions {
   justify-content: space-between;

@@ -206,6 +206,14 @@ export async function addComment(token: string, projectId: number, body: { messa
   })
 }
 
+export async function replyToComment(token: string, projectId: number, commentId: number, body: { message: string }) {
+  return request<ProjectComment>(`/api/projects/${projectId}/comments/${commentId}/replies`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify(body),
+  })
+}
+
 export async function raiseHand(token: string, projectId: number, body: { message: string }) {
   return request<CollaborationRequest>(`/api/projects/${projectId}/raise-hand`, {
     method: 'POST',
@@ -213,3 +221,18 @@ export async function raiseHand(token: string, projectId: number, body: { messag
     body: JSON.stringify(body),
   })
 }
+
+export async function acceptCollaborationRequest(token: string, projectId: number, requestId: number) {
+  return request<CollaborationRequest>(`/api/projects/${projectId}/collaboration-requests/${requestId}/accept`, {
+    method: 'PATCH',
+    token,
+  })
+}
+
+export async function declineCollaborationRequest(token: string, projectId: number, requestId: number) {
+  return request<CollaborationRequest>(`/api/projects/${projectId}/collaboration-requests/${requestId}/decline`, {
+    method: 'PATCH',
+    token,
+  })
+}
+

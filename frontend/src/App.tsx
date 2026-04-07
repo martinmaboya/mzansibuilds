@@ -2,9 +2,11 @@ import { FormEvent, useEffect, useMemo, useState } from 'react'
 import {
   addComment,
   addMilestone,
+  acceptCollaborationRequest,
   completeProject,
   createProject,
   deleteProject,
+  declineCollaborationRequest,
   getCurrentUser,
   getCelebrationWall,
   getFeed,
@@ -14,6 +16,7 @@ import {
   getProjectUpdates,
   loginUser,
   raiseHand,
+  replyToComment,
   registerUser,
   toLabel,
   updateMyProfile,
@@ -117,6 +120,7 @@ function App() {
   const [milestone, setMilestone] = useState('')
   const [milestoneNote, setMilestoneNote] = useState('')
   const [comment, setComment] = useState('')
+  const [replyDraftByCommentId, setReplyDraftByCommentId] = useState<Record<number, string>>({})
   const [collaborationMessage, setCollaborationMessage] = useState('')
 
   const authReady = token.length > 0
@@ -155,6 +159,25 @@ function App() {
     () => projects.find((project) => project.id === pendingDeleteProjectId) ?? null,
     [projects, pendingDeleteProjectId]
   )
+
+  const rootComments = useMemo(
+    () => projectComments.filter((entry) => entry.parentCommentId === null),
+    [projectComments]
+  )
+
+  const repliesByParentId = useMemo(() => {
+    const map: Record<number, ProjectComment[]> = {}
+    projectComments
+      .filter((entry) => entry.parentCommentId !== null)
+      .forEach((entry) => {
+        const parentId = entry.parentCommentId as number
+        if (!map[parentId]) {
+          map[parentId] = []
+        }
+        map[parentId].push(entry)
+      })
+    return map
+  }, [projectComments])
 
   useEffect(() => {
     if (!projects.length) {
@@ -505,6 +528,72 @@ function App() {
       showFeedback('success', 'Collaboration request sent', 'Collaboration request sent successfully.')
     } catch (requestError) {
       showActionError('Send collaboration request', requestError, 'Could not send collaboration request.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const onReplyToComment = async (event: FormEvent, parentCommentId: number) => {
+    event.preventDefault()
+
+    if (!authReady || activeProjectId === null || !selectedProject) {
+      showFeedback('error', 'Reply blocked', 'Select a project and login first.')
+      return
+    }
+
+    const parentComment = rootComments.find((entry) => entry.id === parentCommentId)
+    if (!parentComment) {
+      showFeedback('error', 'Reply blocked', 'Comment thread was not found.')
+      return
+    }
+
+    const canReply = authEmail === selectedProject.ownerId || authEmail === parentComment.authorId
+    if (!canReply) {
+      showFeedback('error', 'Reply blocked', 'Only the project owner or original commenter can reply in this thread.')
+      return
+    }
+
+    const message = (replyDraftByCommentId[parentCommentId] ?? '').trim()
+    if (!message) {
+      showFeedback('error', 'Reply blocked', 'Reply message cannot be empty.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      await replyToComment(token, activeProjectId, parentCommentId, { message })
+      await loadProjectActivity(activeProjectId)
+      setReplyDraftByCommentId((current) => ({ ...current, [parentCommentId]: '' }))
+      showFeedback('success', 'Reply posted', 'Reply posted successfully.')
+    } catch (requestError) {
+      showActionError('Reply to comment', requestError, 'Could not post reply.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const onDecideCollaborationRequest = async (requestId: number, decision: 'accept' | 'decline') => {
+    if (!authReady || activeProjectId === null || !selectedProject) {
+      showFeedback('error', 'Decision blocked', 'Select a project and login first.')
+      return
+    }
+
+    if (authEmail !== selectedProject.ownerId) {
+      showFeedback('error', 'Decision blocked', 'Only the project owner can decide collaboration requests.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      if (decision === 'accept') {
+        await acceptCollaborationRequest(token, activeProjectId, requestId)
+      } else {
+        await declineCollaborationRequest(token, activeProjectId, requestId)
+      }
+      await loadProjectActivity(activeProjectId)
+      showFeedback('success', 'Request updated', `Collaboration request ${decision === 'accept' ? 'accepted' : 'declined'} successfully.`)
+    } catch (requestError) {
+      showActionError('Update collaboration request', requestError, 'Could not update collaboration request.')
     } finally {
       setLoading(false)
     }
@@ -950,11 +1039,40 @@ function App() {
                 {projectComments.length === 0 ? (
                   <p className="empty-state">No comments yet.</p>
                 ) : (
-                  projectComments.map((entry) => (
-                    <p key={entry.id} className="mini-note">
-                      <strong>{entry.authorId}</strong>: {entry.message}
-                    </p>
-                  ))
+                  rootComments.map((entry) => {
+                    const replies = repliesByParentId[entry.id] ?? []
+                    const canReply = authReady && selectedProject
+                      ? authEmail === selectedProject.ownerId || authEmail === entry.authorId
+                      : false
+
+                    return (
+                      <div key={entry.id} className="comment-thread">
+                        <p className="mini-note">
+                          <strong>{entry.authorId}</strong>: {entry.message}
+                        </p>
+                        {replies.map((reply) => (
+                          <p key={reply.id} className="mini-note reply-note">
+                            <strong>{reply.authorId}</strong>: {reply.message}
+                          </p>
+                        ))}
+                        {canReply ? (
+                          <form className="inline-reply-form" onSubmit={(event) => void onReplyToComment(event, entry.id)}>
+                            <textarea
+                              value={replyDraftByCommentId[entry.id] ?? ''}
+                              onChange={(event) => {
+                                const value = event.target.value
+                                setReplyDraftByCommentId((current) => ({ ...current, [entry.id]: value }))
+                              }}
+                              rows={2}
+                              placeholder="Reply in this thread"
+                              required
+                            />
+                            <button disabled={loading}>Reply</button>
+                          </form>
+                        ) : null}
+                      </div>
+                    )
+                  })
                 )}
               </div>
 
@@ -964,9 +1082,31 @@ function App() {
                   <p className="empty-state">No collaboration requests yet.</p>
                 ) : (
                   projectCollaborationRequests.map((entry) => (
-                    <p key={entry.id} className="mini-note">
-                      <strong>{entry.requesterId}</strong>: {entry.message} ({entry.status})
-                    </p>
+                    <div key={entry.id} className="request-thread">
+                      <p className="mini-note">
+                        <strong>{entry.requesterId}</strong>: {entry.message} ({entry.status})
+                      </p>
+                      {selectedProject?.ownerId === authEmail && entry.status === 'OPEN' ? (
+                        <div className="row-gap">
+                          <button
+                            type="button"
+                            className="secondary-btn"
+                            onClick={() => void onDecideCollaborationRequest(entry.id, 'accept')}
+                            disabled={loading}
+                          >
+                            Accept
+                          </button>
+                          <button
+                            type="button"
+                            className="danger-btn"
+                            onClick={() => void onDecideCollaborationRequest(entry.id, 'decline')}
+                            disabled={loading}
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
                   ))
                 )}
               </div>

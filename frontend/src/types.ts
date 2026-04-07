@@ -43,6 +43,7 @@ export type ProjectComment = {
   id: number
   projectId: number
   authorId: string
+  parentCommentId: number | null
   message: string
   createdAt: string
 }
